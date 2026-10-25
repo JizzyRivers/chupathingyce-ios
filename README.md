@@ -12,8 +12,8 @@ image and never downloads Microsoft's files.
 
 | Phase | What | Where it runs | State |
 | --- | --- | --- | --- |
-| 1 | The launcher: disc import, map import, then settings, servers | Expo Go on iPhone and iPad | Disc and map import written and tested in Node; not yet tried on a device |
-| 2 | The game: the engine as a native module, in a development build | iPhone and iPad, sideloaded | Not started |
+| 1 | The launcher: disc import, map import, then settings, servers | Expo Go on iPhone and iPad | Map zip import works on an iPhone 14 Plus (iOS 27.0) |
+| 2 | The game: the engine as a native module, in a development build | iPhone and iPad, sideloaded | The CI build and the memory check, before the engine |
 | 3 | A release IPA, and tvOS | Sideloaded (AltStore, SideStore) | Not started |
 
 ## Phase 1: the launcher in Expo Go
@@ -67,24 +67,49 @@ code that calls SDL3 and OpenGL ES 3 directly, with no guest image, and
 `host/host_touch.c` has the touch controls. iOS keeps OpenGL ES 3 (deprecated,
 not removed), and SDL3 and FFmpeg build for iOS and tvOS.
 
-**Memory, with a free Apple account.** The desktop and android64 builds reserve
-4 GB of address space (8 GB, to align it), which iOS gives only with the
-`extended-virtual-addressing` entitlement of a paid account. The Xbox 360
-port's layout avoids that: with `HALO_64BIT` and `HALO_WINDOW_TRANSLATED`
-(`source/cseries/xbox_address.h`) the game uses Xbox addresses `0x78000000` to
-`0x88000000` only, a 256 MB block placed wherever there is room, of which
-128 MB is committed (`port/linux/src/platform.h`). The iOS port should use that
-layout, as a console port does (`configure.py --console-port`,
+**Memory, with a free Apple account: still to measure.** There are two ways
+to lay out the game's memory on iOS:
+
+- The 64-bit builds' layout. The desktop and android64 builds reserve 4 GB of
+  address space, aligned to 4 GB, by reserving 8 GB and keeping the aligned
+  half (`port/linux/src/xbox_memory.c`). With a free account, iOS may not
+  allow that much. Apple's `extended-virtual-addressing` entitlement, which
+  raises the limit, needs a paid account.
+- A console-style window. The Xbox 360 port (`HALO_WINDOW_TRANSLATED`,
+  `source/cseries/xbox_address.h`) uses only the Xbox addresses `0x78000000`
+  to `0x88000000`, a 256 MB block. Its base is a 32-bit number, though, so
+  the window has to sit below 4 GB. iOS keeps the low 4 GB of every 64-bit
+  app (`__PAGEZERO`), so the 360's mode cannot run unchanged. It would need a
+  64-bit base, which is a change to the game's shared code, contributed
+  upstream.
+
+The development build measures which one the device allows: its launcher has
+a **Memory check** (`app/modules/halo-native`), which does what
+`xbox_memory.c` does and reports the result. The game builds as a console
+port does (`configure.py --console-port`,
 [docs/building.md](https://github.com/ChupathingyCE/chupathingyce/blob/main/docs/building.md#console-ports)),
 with the game as a submodule.
 
 **Building without a Mac or a paid account.** iOS apps are built on macOS. Here
-that means GitHub Actions' macOS runners. They build the IPA unsigned
-(`expo prebuild`, then `xcodebuild` with `CODE_SIGNING_ALLOWED=NO`), and
-AltStore or SideStore sign and install it with a free Apple ID. With a free
-Apple ID, an app runs for 7 days before it must be refreshed, and at most 3
+that means GitHub Actions' macOS runners (`.github/workflows/ios.yml`). They
+build the app unsigned (`expo prebuild`, `pod install`, then `xcodebuild` with
+`CODE_SIGNING_ALLOWED=NO`) and attach the `.ipa` to the run. AltStore or
+SideStore then signs and installs it with a free Apple ID. With a free Apple
+ID, an app runs for 7 days before it must be refreshed, and at most 3
 sideloaded apps can be installed at once. EAS Build cannot make device builds
 without a paid account.
+
+To install a build:
+
+1. Open the repository's **Actions** tab, then the **iOS** workflow. Pushes to
+   `main` build the Debug configuration. **Run workflow** lets you choose
+   Debug or Release.
+2. Download the run's `ChupathingyCE-<configuration>-ipa` artifact, unzip it,
+   and open the `.ipa` in SideStore or AltStore on the device.
+3. Debug is the development build. Start `npx expo start` in `app` on the
+   computer, open the app, and pick the computer's server. JavaScript changes
+   then load as in Expo Go, and only native changes need a new build. Release
+   carries its JavaScript and runs on its own.
 
 ## Phase 3: tvOS, and releases
 
