@@ -28,6 +28,7 @@ launcher around it can, and is written so that the development build keeps it.
 | `LauncherActivity.java` | `app/src/app/index.tsx`, `app/src/lib/importDisc.ts` |
 | the data folder (`getExternalFilesDir`) | the app's Documents folder, the same layout (`app/src/lib/storage.ts`) |
 | `MapImporter.java` | `app/src/lib/mapImport.ts` and `app/src/lib/zip.ts`, tested in `app/test/mapImport.test.ts`. It also takes Xbox maps (into `maps/`), so a zip of your own disc's maps folder can stand in for the disc image |
+| (none) | `app/src/lib/download.ts`: downloads a `.zip` of maps, or a `.map`, from an address the player types in, as an iOS background download, then imports it as a picked file. The app has no address of its own built in |
 | `config.toml` settings, touch layout | to do |
 
 ### Run it
