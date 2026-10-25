@@ -47,8 +47,10 @@ jobs:
         id: sdl
         with:
           path: build/sdl3-ios
-          key: sdl3-ios-${{ env.SDL_COMMIT }}-${{ env.IOS_MINIMUM }}-1
+          key: sdl3-ios-${{ env.SDL_COMMIT }}-${{ env.IOS_MINIMUM }}-2
 
+      # (without SDL's camera: the game has no use for one, and it needs
+      # CoreMedia and a camera usage description)
       - name: SDL3 for iOS
         if: steps.sdl.outputs.cache-hit != 'true'
         run: |
@@ -58,6 +60,7 @@ jobs:
             -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="$IOS_MINIMUM" -DCMAKE_BUILD_TYPE=Release \
             -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
+            -DSDL_CAMERA=OFF \
             -DCMAKE_INSTALL_PREFIX="$PWD/build/sdl3-ios" > build/sdl3-configure.log
           ninja -C build/sdl3-ios-build install > build/sdl3-build.log
           ls -l build/sdl3-ios/lib
