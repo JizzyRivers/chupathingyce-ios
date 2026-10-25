@@ -29,6 +29,27 @@ index 6eba8da..8c8f661 100644
  		glDisable(GL_SCISSOR_TEST);
  		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
  		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+diff --git a/port/linux/src/gl_functions.c b/port/linux/src/gl_functions.c
+index 157160e..5134d10 100644
+--- a/port/linux/src/gl_functions.c
++++ b/port/linux/src/gl_functions.c
+@@ -29,9 +29,15 @@ int gl_functions_load(void)
+ 		!strcmp(#name, "glVertexAttribIFormat") || !strcmp(#name, "glVertexAttribBinding") || \
+ 		!strcmp(#name, "glBindVertexBuffer") || !strcmp(#name, "glGetQueryBufferObjectuiv") || \
+ 		!strcmp(#name, "glBindTextures"))
++#ifdef HALO_ANDROID
++/* ES 3.2's; on 3.0 (iOS's newest) gl_initialize does without it */
++#define GL_ES_OPTIONAL_FUNCTION(name) !strcmp(#name, "glDrawElementsBaseVertex")
++#else
++#define GL_ES_OPTIONAL_FUNCTION(name) 0
++#endif
+ #define GL_LOAD_FUNCTION(name) \
+ 	halo_##name = (__typeof__(halo_##name))SDL_GL_GetProcAddress(#name); \
+-	if (!halo_##name && !GL_OPTIONAL_FUNCTION(name)) \
++	if (!halo_##name && !GL_OPTIONAL_FUNCTION(name) && !GL_ES_OPTIONAL_FUNCTION(name)) \
+ 	{ \
+ 		platform_log("OpenGL function %s is unavailable", #name); \
+ 		success = FALSE; \
 diff --git a/port/linux/src/p2p.c b/port/linux/src/p2p.c
 index 0008f20..3401dad 100644
 --- a/port/linux/src/p2p.c
