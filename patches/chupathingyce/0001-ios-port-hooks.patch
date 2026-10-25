@@ -91,7 +91,7 @@ index f545dcf..18c3edc 100644
  if it cannot be read (p2p.c's hardware id; Linux has /etc/machine-id, which
  macOS does not) */
 diff --git a/port/linux/src/sdl_platform.c b/port/linux/src/sdl_platform.c
-index ad49e59..81858fe 100644
+index ad49e59..8149609 100644
 --- a/port/linux/src/sdl_platform.c
 +++ b/port/linux/src/sdl_platform.c
 @@ -1251,7 +1251,7 @@ BOOL platform_video_initialize(unsigned long width, unsigned long height)
@@ -130,6 +130,15 @@ index ad49e59..81858fe 100644
  /* with vsync off, the time between frames display.max_fps asks for (0:
  twice the display's refresh rate), or 0 for no limit. A GPU never left idle
  can hang (Intel's Raptor Lake graphics, whose reset then takes the desktop
+@@ -2141,7 +2152,7 @@ void platform_pump_events(void)
+ 			break;
+ #endif
+ 		case SDL_EVENT_GAMEPAD_ADDED:
+-#ifdef HALO_ANDROID
++#if defined(HALO_ANDROID) && !defined(HALO_IOS)
+ 			/* (the guest reaches SDL only through host_imports.list, which
+ 			has no SDL_GetGamepadName) */
+ 			SDL_OpenGamepad(event.gdevice.which);
 diff --git a/port/linux/src/ui_overlay.c b/port/linux/src/ui_overlay.c
 index 37c6551..75372d2 100644
 --- a/port/linux/src/ui_overlay.c
