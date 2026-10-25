@@ -5,12 +5,15 @@
 # Debug is the development build: it loads the JavaScript from
 # `npx expo start` on the computer, as Expo Go does, so only native changes
 # need a new build. Release carries its JavaScript and runs on its own.
+#
+# The game is built first (.github/actions/engine) and linked in through the
+# halo-native module, which Play starts (app/modules/halo-native).
 name: iOS
 
 on:
   push:
     branches: [main]
-    paths: ["app/**", ".github/workflows/ios.yml"]
+    paths: ["app/**", "port/**", "patches/**", "chupathingyce", ".github/actions/engine/**", ".github/workflows/ios.yml"]
   workflow_dispatch:
     inputs:
       configuration:
@@ -22,14 +25,20 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       CONFIGURATION: ${{ inputs.configuration || 'Debug' }}
+      # chupathingyce's pin (tools/android_build.py: SDL_TAG, SDL_COMMIT)
+      SDL_TAG: release-3.4.16
+      SDL_COMMIT: fa2c02bb6e21974a89ea9824bc53c9932abe5f9c
+      IOS_MINIMUM: "16.4"
     defaults:
       run:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Use the newest Xcode on the runner
         run: |
@@ -49,6 +58,15 @@ jobs:
         run: |
           npm test
           npx tsc --noEmit
+
+      - name: The game
+        uses: ./.github/actions/engine
+
+      - name: The game, into the halo-native module
+        run: |
+          mkdir -p modules/halo-native/ios/lib
+          cp ../chupathingyce/build/ios/libhalo.a ../build/sdl3-ios/lib/libSDL3.a modules/halo-native/ios/lib/
+          ls -lh modules/halo-native/ios/lib
 
       - name: Generate the iOS project
         run: npx expo prebuild --platform ios --clean --no-install
@@ -74,6 +92,7 @@ jobs:
             build > xcodebuild.log 2>&1
           status=$?
           grep -E 'error:|\*\* BUILD' xcodebuild.log | tail -60
+          grep -E -A30 'Undefined symbols|duplicate symbol' xcodebuild.log | head -120
           exit $status
 
       - name: Package the .ipa
@@ -94,6 +113,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: xcodebuild-log
-          path: app/ios/xcodebuild.log
+          name: build-logs
+          path: |
+            app/ios/xcodebuild.log
+            ninja.log
           if-no-files-found: ignore

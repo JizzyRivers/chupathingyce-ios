@@ -1,14 +1,13 @@
-# Builds the game for iOS (port/ios/build.py): SDL3 for iOS, then the game
-# and the platform layer as a static library for the app, and a link of it
-# with SDL3 and iOS's frameworks that fails on anything missing. Errors are
-# collected from the whole build (ninja -k 0), with a count of each, so one
-# run shows them all.
+# Builds the game for iOS on its own (.github/actions/engine: SDL3 for iOS,
+# then ninja ios), for the port's changes: the game as a static library, and
+# a link of it with SDL3 and iOS's frameworks that fails on anything missing.
+# The app's workflow (ios.yml) runs the same build to link the game in.
 name: Engine
 
 on:
   push:
     branches: [main]
-    paths: ["port/**", "patches/**", "chupathingyce", ".github/workflows/engine.yml"]
+    paths: ["port/**", "patches/**", "chupathingyce", ".github/actions/engine/**", ".github/workflows/engine.yml"]
   workflow_dispatch:
 
 env:
@@ -33,62 +32,7 @@ jobs:
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
 
-      - name: Apply the iOS port's changes to the game
-        run: |
-          for patch in patches/chupathingyce/*.patch; do
-            echo "applying $patch"
-            git -C chupathingyce apply --whitespace=nowarn "../$patch"
-          done
-
-      - name: Tools
-        run: brew install ninja
-
-      - uses: actions/cache@v4
-        id: sdl
-        with:
-          path: build/sdl3-ios
-          key: sdl3-ios-${{ env.SDL_COMMIT }}-${{ env.IOS_MINIMUM }}-2
-
-      # (without SDL's camera: the game has no use for one, and it needs
-      # CoreMedia and a camera usage description)
-      - name: SDL3 for iOS
-        if: steps.sdl.outputs.cache-hit != 'true'
-        run: |
-          git clone -q --depth 1 --branch "$SDL_TAG" https://github.com/libsdl-org/SDL.git build/SDL3
-          test "$(git -C build/SDL3 rev-parse HEAD)" = "$SDL_COMMIT"
-          cmake -S build/SDL3 -B build/sdl3-ios-build -G Ninja \
-            -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET="$IOS_MINIMUM" -DCMAKE_BUILD_TYPE=Release \
-            -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST_LIBRARY=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
-            -DSDL_CAMERA=OFF \
-            -DCMAKE_INSTALL_PREFIX="$PWD/build/sdl3-ios" > build/sdl3-configure.log
-          ninja -C build/sdl3-ios-build install > build/sdl3-build.log
-          ls -l build/sdl3-ios/lib
-
-      - name: Configure
-        working-directory: chupathingyce
-        # (the runner's Android SDK left out: configure.py would set up the
-        # Android builds too)
-        run: |
-          env -u ANDROID_HOME -u ANDROID_SDK_ROOT -u ANDROID_NDK_HOME -u ANDROID_NDK_ROOT -u ANDROID_NDK_LATEST_HOME \
-            python3 configure.py --without-ffmpeg --console-port ../port/ios --ios-sdl ../build/sdl3-ios
-          grep -q '^build ios:' build.ninja
-
-      - name: Build
-        working-directory: chupathingyce
-        run: |
-          set +e
-          ninja -k 0 ios > ../ninja.log 2>&1
-          status=$?
-          echo "ninja exit $status"
-          echo "=== errors, by count"
-          grep -E 'error:' ../ninja.log | sed -E 's/^[^ ]*: error: //' | sort | uniq -c | sort -nr | head -80
-          echo "=== first errors in full"
-          grep -E -m 60 -B2 -A3 'error:' ../ninja.log
-          echo "=== undefined symbols"
-          grep -E -A40 'Undefined symbols' ../ninja.log | head -120
-          tail -5 ../ninja.log
-          exit $status
+      - uses: ./.github/actions/engine
 
       - uses: actions/upload-artifact@v4
         if: always()

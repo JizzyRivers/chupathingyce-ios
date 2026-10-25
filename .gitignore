@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# the game and SDL3 for iOS, put there by .github/workflows/ios.yml
+app/modules/halo-native/ios/lib/
