@@ -12,7 +12,7 @@ image and never downloads Microsoft's files.
 
 | Phase | What | Where it runs | State |
 | --- | --- | --- | --- |
-| 1 | The launcher: disc import, then map import, settings, servers | Expo Go on iPhone and iPad | Disc import written and tested in Node; not yet tried on a device |
+| 1 | The launcher: disc import, map import, then settings, servers | Expo Go on iPhone and iPad | Disc and map import written and tested in Node; not yet tried on a device |
 | 2 | The game: the engine as a native module, in a development build | iPhone and iPad, sideloaded | Not started |
 | 3 | A release IPA, and tvOS | Sideloaded (AltStore, SideStore) | Not started |
 
@@ -27,7 +27,7 @@ launcher around it can, and is written so that the development build keeps it.
 | `XisoExtractor.java` (from `port/linux/src/xiso.c`) | `app/src/lib/xiso.ts`, tested in `app/test/xiso.test.ts` |
 | `LauncherActivity.java` | `app/src/app/index.tsx`, `app/src/lib/importDisc.ts` |
 | the data folder (`getExternalFilesDir`) | the app's Documents folder, the same layout (`app/src/lib/storage.ts`) |
-| `MapImporter.java` | to do |
+| `MapImporter.java` | `app/src/lib/mapImport.ts` and `app/src/lib/zip.ts`, tested in `app/test/mapImport.test.ts`. It also takes Xbox maps (into `maps/`), so a zip of your own disc's maps folder can stand in for the disc image |
 | `config.toml` settings, touch layout | to do |
 
 ### Run it
