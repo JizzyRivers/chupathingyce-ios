@@ -5,16 +5,16 @@
 # The game is built first (.github/actions/engine) and linked into the
 # native app (app/project.yml, which XcodeGen makes the Xcode project of).
 #
-# A pushed tag v<version> (v0.2.0) is a release: the app takes its version,
-# and the .ipa is published as a GitHub pre-release with
-# .github/release-notes.md, where anyone can download it without signing in.
+# A pushed tag v<version> (v0.2.0) is a release (release.yml, which runs
+# this): the app takes its version, and the .ipa is published as a GitHub
+# pre-release with .github/release-notes.md, where anyone can download it
+# without signing in.
 name: iOS
 
 on:
+  workflow_call:
   push:
     branches: [main]
-    # (a tag's push runs whatever the paths below say)
-    tags: ["v*"]
     paths: ["app/**", "port/**", "patches/**", "chupathingyce", ".github/actions/engine/**", ".github/workflows/ios.yml"]
   workflow_dispatch:
     inputs:

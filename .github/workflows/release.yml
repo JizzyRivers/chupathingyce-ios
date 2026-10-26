@@ -1,0 +1,14 @@
+# A pushed tag v<version> (v0.2.0) builds the app at that version and
+# publishes it as a GitHub pre-release (ios.yml's "Publish the release").
+# Its own workflow: ios.yml's paths filter keeps a tag's push from running it.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  ios:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/ios.yml
