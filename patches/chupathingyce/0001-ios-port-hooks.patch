@@ -210,3 +210,19 @@ index a3bc74c..88a78d4 100644
  /* ---------- GL state
  
  The device caches the GL state it sets for draws (d3d8_gl.c); code that
+diff --git a/port/linux/src/xiso.c b/port/linux/src/xiso.c
+index 0c59061..d1c17bc 100644
+--- a/port/linux/src/xiso.c
++++ b/port/linux/src/xiso.c
+@@ -54,8 +54,9 @@ a bink folder, or a movie that cannot be copied, does not fail the
+ extraction: the game skips movies it cannot find.
+ */
+ 
+-/* (the desktop ports only: the Android app imports the game data itself) */
+-#ifndef HALO_ANDROID
++/* (the desktop ports and iOS's launcher: the Android app imports the game
++data itself) */
++#if !defined(HALO_ANDROID) || defined(HALO_IOS)
+ 
+ #ifdef HALO_EXTRACTOR_STANDALONE
+ /* Built for the Switch host, which calls this from its own start-up rather

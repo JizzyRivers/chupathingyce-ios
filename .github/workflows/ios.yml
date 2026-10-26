@@ -2,12 +2,8 @@
 # is the run's artifact, for SideStore or AltStore to sign with a free Apple
 # ID and install. No Mac or paid account needed.
 #
-# Debug is the development build: it loads the JavaScript from
-# `npx expo start` on the computer, as Expo Go does, so only native changes
-# need a new build. Release carries its JavaScript and runs on its own.
-#
-# The game is built first (.github/actions/engine) and linked in through the
-# halo-native module, which Play starts (app/modules/halo-native).
+# The game is built first (.github/actions/engine) and linked into the
+# native app (app/project.yml, which XcodeGen makes the Xcode project of).
 name: iOS
 
 on:
@@ -17,17 +13,17 @@ on:
   workflow_dispatch:
     inputs:
       configuration:
-        description: "Debug (development build) or Release (standalone)"
+        description: "Release, or Debug (the launcher's Swift unoptimised, for the debugger)"
         type: choice
-        options: [Debug, Release]
-        default: Debug
+        options: [Release, Debug]
+        default: Release
 
 jobs:
   build:
     runs-on: macos-latest
     timeout-minutes: 120
     env:
-      CONFIGURATION: ${{ inputs.configuration || 'Debug' }}
+      CONFIGURATION: ${{ inputs.configuration || 'Release' }}
       # chupathingyce's pin (tools/android_build.py: SDL_TAG, SDL_COMMIT)
       SDL_TAG: release-3.4.16
       SDL_COMMIT: fa2c02bb6e21974a89ea9824bc53c9932abe5f9c
@@ -46,45 +42,26 @@ jobs:
           sudo xcode-select -s "$xcode"
           xcodebuild -version
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-
-      - run: npm ci
-
-      - name: Tests and typecheck
-        run: |
-          npm test
-          npx tsc --noEmit
-
       - name: The game
         uses: ./.github/actions/engine
 
-      - name: The game, into the halo-native module
+      - name: The game, into the app
         run: |
-          mkdir -p modules/halo-native/ios/lib
-          cp ../chupathingyce/build/ios/libhalo.a ../build/sdl3-ios/lib/libSDL3.a modules/halo-native/ios/lib/
-          ls -lh modules/halo-native/ios/lib
+          mkdir -p lib
+          cp ../chupathingyce/build/ios/libhalo.a ../build/sdl3-ios/lib/libSDL3.a lib/
+          ls -lh lib
 
-      - name: Generate the iOS project
-        run: npx expo prebuild --platform ios --clean --no-install
-
-      - name: Install the pods
-        working-directory: app/ios
-        run: pod install
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
 
       - name: Build, unsigned
-        working-directory: app/ios
         run: |
-          workspace=$(ls -d *.xcworkspace | head -1)
-          scheme=${workspace%.xcworkspace}
-          echo "workspace $workspace, scheme $scheme"
           # (the whole log is the artifact below when this fails; here, its errors)
           set +e
           xcodebuild \
-            -workspace "$workspace" -scheme "$scheme" \
+            -project ChupathingyCE.xcodeproj -scheme ChupathingyCE \
             -configuration "$CONFIGURATION" \
             -sdk iphoneos -destination 'generic/platform=iOS' \
             -derivedDataPath build \
@@ -96,18 +73,16 @@ jobs:
           exit $status
 
       - name: Package the .ipa
-        working-directory: app/ios
         run: |
-          app=$(ls -d build/Build/Products/"$CONFIGURATION"-iphoneos/*.app | head -1)
           mkdir -p Payload
-          cp -R "$app" Payload/
+          cp -R "build/Build/Products/$CONFIGURATION-iphoneos/ChupathingyCE.app" Payload/
           zip -qry "ChupathingyCE-$CONFIGURATION.ipa" Payload
           ls -lh "ChupathingyCE-$CONFIGURATION.ipa"
 
       - uses: actions/upload-artifact@v4
         with:
           name: ChupathingyCE-${{ env.CONFIGURATION }}-ipa
-          path: app/ios/ChupathingyCE-${{ env.CONFIGURATION }}.ipa
+          path: app/ChupathingyCE-${{ env.CONFIGURATION }}.ipa
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
@@ -115,6 +90,6 @@ jobs:
         with:
           name: build-logs
           path: |
-            app/ios/xcodebuild.log
+            app/xcodebuild.log
             ninja.log
           if-no-files-found: ignore
