@@ -55,10 +55,11 @@ runs:
       shell: bash
       working-directory: chupathingyce
       # (the runner's Android SDK left out: configure.py would set up the
-      # Android builds too)
+      # Android builds too; --release, as the builds players get: the game's
+      # assertions are not checked)
       run: |
         env -u ANDROID_HOME -u ANDROID_SDK_ROOT -u ANDROID_NDK_HOME -u ANDROID_NDK_ROOT -u ANDROID_NDK_LATEST_HOME \
-          python3 configure.py --console-port ../port/ios --ios-sdl ../build/sdl3-ios
+          python3 configure.py --release --console-port ../port/ios --ios-sdl ../build/sdl3-ios
         grep -q '^build ios:' build.ninja
 
     - name: Build

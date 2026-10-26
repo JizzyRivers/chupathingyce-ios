@@ -4,11 +4,17 @@
 #
 # The game is built first (.github/actions/engine) and linked into the
 # native app (app/project.yml, which XcodeGen makes the Xcode project of).
+#
+# A pushed tag v<version> (v0.2.0) is a release: the app takes its version,
+# and the .ipa is published as a GitHub pre-release with
+# .github/release-notes.md, where anyone can download it without signing in.
 name: iOS
 
 on:
   push:
     branches: [main]
+    # (a tag's push runs whatever the paths below say)
+    tags: ["v*"]
     paths: ["app/**", "port/**", "patches/**", "chupathingyce", ".github/actions/engine/**", ".github/workflows/ios.yml"]
   workflow_dispatch:
     inputs:
@@ -22,8 +28,12 @@ jobs:
   build:
     runs-on: macos-latest
     timeout-minutes: 120
+    permissions:
+      contents: write
     env:
       CONFIGURATION: ${{ inputs.configuration || 'Release' }}
+      # a release's tag (v0.2.0), else empty
+      VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
       # chupathingyce's pin (tools/android_build.py: SDL_TAG, SDL_COMMIT)
       SDL_TAG: release-3.4.16
       SDL_COMMIT: fa2c02bb6e21974a89ea9824bc53c9932abe5f9c
@@ -74,6 +84,7 @@ jobs:
             -configuration "$CONFIGURATION" \
             -sdk iphoneos -destination 'generic/platform=iOS' \
             -derivedDataPath build \
+            ${VERSION:+MARKETING_VERSION=${VERSION#v} CURRENT_PROJECT_VERSION=$GITHUB_RUN_NUMBER} \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build > xcodebuild.log 2>&1
           status=$?
@@ -87,6 +98,16 @@ jobs:
           cp -R "build/Build/Products/$CONFIGURATION-iphoneos/ChupathingyCE.app" Payload/
           zip -qry "ChupathingyCE-$CONFIGURATION.ipa" Payload
           ls -lh "ChupathingyCE-$CONFIGURATION.ipa"
+
+      - name: Publish the release
+        if: env.VERSION != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp "ChupathingyCE-$CONFIGURATION.ipa" "ChupathingyCE-$VERSION.ipa"
+          gh release create "$VERSION" "ChupathingyCE-$VERSION.ipa" \
+            --title "ChupathingyCE for iOS $VERSION" \
+            --notes-file ../.github/release-notes.md --prerelease
 
       - uses: actions/upload-artifact@v4
         with:
