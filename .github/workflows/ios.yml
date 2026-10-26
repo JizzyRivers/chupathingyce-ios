@@ -106,7 +106,7 @@ jobs:
         run: |
           cp "ChupathingyCE-$CONFIGURATION.ipa" "ChupathingyCE-$VERSION.ipa"
           gh release create "$VERSION" "ChupathingyCE-$VERSION.ipa" \
-            --title "ChupathingyCE for iOS $VERSION" \
+            --title "$VERSION" \
             --notes-file ../.github/release-notes.md --prerelease
 
       - uses: actions/upload-artifact@v4
