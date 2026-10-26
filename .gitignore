@@ -10,3 +10,6 @@ app/build/
 app/Payload/
 app/*.ipa
 app/xcodebuild.log
+# put in the bundle by .github/workflows/ios.yml
+app/Resources/brokers.txt
+app/Resources/cacert.pem

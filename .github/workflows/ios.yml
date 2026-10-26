@@ -51,6 +51,15 @@ jobs:
           cp ../chupathingyce/build/ios/libhalo.a ../build/sdl3-ios/lib/libSDL3.a lib/
           ls -lh lib
 
+      # internet play's MQTT brokers, and the certificate authorities HTTPS
+      # is checked against (curl's copy of Mozilla's, checked against the
+      # digest curl publishes beside it): port/ios/src/ios_main.c
+      - name: Internet play's files, into the bundle
+        run: |
+          cp ../chupathingyce/port/assets/network/brokers.txt Resources/
+          curl -fsSL https://curl.se/ca/cacert.pem -o Resources/cacert.pem
+          curl -fsSL https://curl.se/ca/cacert.pem.sha256 | awk '{ print $1 "  Resources/cacert.pem" }' | shasum -a 256 -c -
+
       - name: Generate the Xcode project
         run: |
           brew install xcodegen
