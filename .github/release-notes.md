@@ -6,7 +6,9 @@ iphone, ipad, apple tv and vision pro. still a test build
 
 bring ur own disc image, the apps have no game files
 
-new: apple tv app, ipad touch controls sized right, picture follows the window (iphone duo fold/unfold, ipad windows, vision pro)
+new in 0.3.1: touch controls redone. glass look, xbox colored abxy w labels, bigger fire, d-pad cross, icon pills for back/pause/light/swap
+
+0.3.0: apple tv app, ipad touch controls sized right, picture follows the window (iphone duo fold/unfold, ipad windows, vision pro)
 iphone duo fold avoidance for the touch controls is in but off till github gets xcode 27.1
 
 works: campaign, controller, touch controls, map import, invites + server browser
