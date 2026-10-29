@@ -1,7 +1,8 @@
 # A pushed tag v<version> (v0.3.0) builds the apps at that version (ios.yml)
 # and publishes them as a GitHub pre-release, with
 # .github/release-notes.md: one .ipa for iPhone, iPad and the Vision Pro,
-# one for the Apple TV. Its own workflow: ios.yml's paths filter keeps a
+# one for the Apple TV, and iPhone Duo's while it needs its own. Its own
+# workflow: ios.yml's paths filter keeps a
 # tag's push from running it. (A tagged commit whose message says [skip ci]
 # runs nothing, this included: tag one that does not.) A tag whose push ran
 # nothing (GitHub can miss a tag deleted and pushed again) is released by
@@ -39,6 +40,10 @@ jobs:
         run: |
           mv ChupathingyCE-ios-Release.ipa "ChupathingyCE-$VERSION-iOS.ipa"
           mv ChupathingyCE-tvos-Release.ipa "ChupathingyCE-$VERSION-tvOS.ipa"
+          # (iPhone Duo's own, while the runner's SDK is older than 27.1: ios.yml)
+          if [ -f ChupathingyCE-duo-Release.ipa ]; then
+            mv ChupathingyCE-duo-Release.ipa "ChupathingyCE-$VERSION-iPhoneDuo.ipa"
+          fi
           sha256sum ChupathingyCE-*.ipa > SHA256SUMS.txt
           gh release create "$VERSION" ChupathingyCE-*.ipa SHA256SUMS.txt \
             --title "$VERSION" \

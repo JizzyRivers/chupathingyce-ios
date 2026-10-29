@@ -10,6 +10,7 @@ app/Info.plist
 app/Info-tvOS.plist
 app/build/
 app/Payload/
+app/Duo/
 app/*.ipa
 app/xcodebuild.log
 # put in the bundle by .github/workflows/ios.yml

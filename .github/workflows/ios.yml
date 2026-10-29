@@ -92,19 +92,6 @@ jobs:
           brew install xcodegen
           xcodegen generate
 
-      # iPhone Duo's fold for the touch controls (app/Sources/iOS/Fold.swift)
-      # is iOS 27.1's: on with that SDK or newer, and left out before it
-      - name: What the SDK has
-        if: matrix.platform == 'ios'
-        run: |
-          version=$(xcrun --sdk iphoneos --show-sdk-version)
-          if [ "$(printf '%s\n27.1\n' "$version" | sort -V | head -1)" = "27.1" ]; then
-            echo "iOS $version SDK: iPhone Duo's fold on"
-            echo "SWIFT_CONDITIONS=IOS_27_1_SDK" >> "$GITHUB_ENV"
-          else
-            echo "iOS $version SDK: iPhone Duo's fold left out until 27.1"
-          fi
-
       - name: Build, unsigned
         run: |
           # (the whole log is the artifact below when this fails; here, its errors)
@@ -115,7 +102,6 @@ jobs:
             -sdk "$SDK" -destination '${{ matrix.destination }}' \
             -derivedDataPath build \
             ${VERSION:+MARKETING_VERSION=${VERSION#v} CURRENT_PROJECT_VERSION=$GITHUB_RUN_NUMBER} \
-            ${SWIFT_CONDITIONS:+"SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) $SWIFT_CONDITIONS"} \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build > xcodebuild.log 2>&1
           status=$?
@@ -130,10 +116,45 @@ jobs:
           zip -qry "ChupathingyCE-$PLATFORM-$CONFIGURATION.ipa" Payload
           ls -lh "ChupathingyCE-$PLATFORM-$CONFIGURATION.ipa"
 
+      # iPhone Duo's inner display, edge to edge, and its fold and hinge
+      # (port/ios/src/ios_touch.m) are for apps built with the iOS 27.1 SDK
+      # or newer: iOS reads the SDK from the binary, and letterboxes an
+      # older one. Until the runner's Xcode has 27.1, a second .ipa is the
+      # same app with its binary marked as built with it (vtool), for iPhone
+      # Duo; the first stays as built. With 27.1 on the runner, the one
+      # .ipa is iPhone Duo's too, and this makes none
+      - name: Package the iPhone Duo .ipa
+        if: matrix.platform == 'ios'
+        run: |
+          version=$(xcrun --sdk iphoneos --show-sdk-version)
+          if [ "$(printf '%s\n27.1\n' "$version" | sort -V | head -1)" = "27.1" ]; then
+            echo "iOS $version SDK: the .ipa is iPhone Duo's already"
+            exit 0
+          fi
+          rm -rf Duo && mkdir -p Duo/Payload
+          cp -R "build/Build/Products/$CONFIGURATION-$SDK/ChupathingyCE.app" Duo/Payload/
+          app=Duo/Payload/ChupathingyCE.app
+          minimum=$(plutil -extract MinimumOSVersion raw "$app/Info.plist")
+          xcrun vtool -set-build-version ios "$minimum" 27.1 -replace -output "$app/ChupathingyCE.duo" "$app/ChupathingyCE"
+          mv "$app/ChupathingyCE.duo" "$app/ChupathingyCE"
+          xcrun vtool -show-build "$app/ChupathingyCE"
+          plutil -replace DTPlatformVersion -string 27.1 "$app/Info.plist"
+          plutil -replace DTSDKName -string iphoneos27.1 "$app/Info.plist"
+          (cd Duo && zip -qry "../ChupathingyCE-duo-$CONFIGURATION.ipa" Payload)
+          ls -lh "ChupathingyCE-duo-$CONFIGURATION.ipa"
+
       - uses: actions/upload-artifact@v4
         with:
           name: ChupathingyCE-${{ matrix.platform }}-${{ env.CONFIGURATION }}-ipa
           path: app/ChupathingyCE-${{ matrix.platform }}-${{ env.CONFIGURATION }}.ipa
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.platform == 'ios'
+        with:
+          name: ChupathingyCE-duo-${{ env.CONFIGURATION }}-ipa
+          path: app/ChupathingyCE-duo-${{ env.CONFIGURATION }}.ipa
+          if-no-files-found: ignore
           retention-days: 14
 
       - uses: actions/upload-artifact@v4

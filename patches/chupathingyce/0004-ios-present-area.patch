@@ -1,0 +1,213 @@
+diff --git a/port/linux/src/d3d8_gl.c b/port/linux/src/d3d8_gl.c
+index 461c651..8322e32 100644
+--- a/port/linux/src/d3d8_gl.c
++++ b/port/linux/src/d3d8_gl.c
+@@ -187,12 +187,14 @@ static void screen_mode_choose(long *width, float scale[2])
+ 	*width = config_integer("display.screen_width");
+ #ifdef HALO_IOS
+ 	/* on iOS, the window's shape once it is open: it changes as iPhone Duo
+-	folds and unfolds, and with an iPad's or a Vision Pro's window */
++	folds and unfolds, and with an iPad's or a Vision Pro's window; or the
++	part of it the picture is shown in (iPhone Duo part open like a laptop:
++	the half above the fold) */
+ 	if (*width <= 0)
+ 	{
+-		int window_width = 0, window_height = 0;
++		int area_x, area_y, window_width = 0, window_height = 0;
+ 
+-		platform_video_drawable_size(&window_width, &window_height);
++		platform_video_present_area(&area_x, &area_y, &window_width, &window_height);
+ 		if (window_width > 0 && window_height > 0)
+ 			*width = (SCREEN_HEIGHT * window_width + window_height / 2) / window_height;
+ 	}
+@@ -1944,6 +1946,7 @@ static BOOL ui_point_view_get(struct ui_point_view *view)
+ 		return FALSE;
+ 	platform_video_window_size(&view->window_width, &view->window_height);
+ 	platform_video_drawable_size(&view->pixel_width, &view->pixel_height);
++	platform_video_present_area(&view->area_left, &view->area_top, &view->area_width, &view->area_height);
+ 	view->target_width = (int)back_buffer->target.width;
+ 	view->target_height = (int)back_buffer->target.height;
+ 	view->gl_width = (int)back_buffer->target.gl_width;
+@@ -5142,6 +5145,7 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
+ 	{
+ 		struct render_target_entry *back_buffer = render_target_get(&device.back_buffer);
+ 		int window_width, window_height, width, height, x, y;
++		int area_x, area_y, area_width, area_height;
+ 
+ 		if (trace_frame())
+ 			platform_log("present back buffer %08lx texture %u", (unsigned long)device.back_buffer.Data,
+@@ -5154,16 +5158,20 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
+ 			write_screenshot(back_buffer);
+ 
+ 		platform_video_drawable_size(&window_width, &window_height);
+-		/* letterbox to the back buffer's aspect ratio */
+-		width = window_width;
+-		height = (int)((long)window_width * back_buffer->target.gl_height / back_buffer->target.gl_width);
+-		if (height > window_height)
++		/* letterbox to the back buffer's aspect ratio, in the part of the
++		window the picture is shown in (all of it, but on iPhone Duo part
++		open like a laptop: port/ios/src/ios_touch.m) */
++		platform_video_present_area(&area_x, &area_y, &area_width, &area_height);
++		width = area_width;
++		height = (int)((long)area_width * back_buffer->target.gl_height / back_buffer->target.gl_width);
++		if (height > area_height)
+ 		{
+-			height = window_height;
+-			width = (int)((long)window_height * back_buffer->target.gl_width / back_buffer->target.gl_height);
++			height = area_height;
++			width = (int)((long)area_height * back_buffer->target.gl_width / back_buffer->target.gl_height);
+ 		}
+-		x = (window_width - width) / 2;
+-		y = (window_height - height) / 2;
++		x = area_x + (area_width - width) / 2;
++		/* (GL's rows count up from the bottom; the area's down from the top) */
++		y = window_height - (area_y + (area_height - height) / 2) - height;
+ 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, platform_window_framebuffer());
+ 		glDisable(GL_SCISSOR_TEST);
+ 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+diff --git a/port/linux/src/sdl_platform.c b/port/linux/src/sdl_platform.c
+index 8149609..c9d7083 100644
+--- a/port/linux/src/sdl_platform.c
++++ b/port/linux/src/sdl_platform.c
+@@ -1315,6 +1315,43 @@ void platform_video_drawable_size(int *width, int *height)
+ 	SDL_GetWindowSizeInPixels(platform_window, width, height);
+ }
+ 
++#ifdef HALO_IOS
++/* the part of the window the picture goes in, as fractions of it (x, y,
++width, height from the top left): port/ios/src/ios_touch.m */
++void host_present_area(float *area);
++#endif
++
++void platform_video_present_area(int *x, int *y, int *width, int *height)
++{
++	int drawable_width = 0, drawable_height = 0;
++
++	platform_video_drawable_size(&drawable_width, &drawable_height);
++	*x = *y = 0;
++	*width = drawable_width;
++	*height = drawable_height;
++#ifdef HALO_IOS
++	{
++		float area[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
++
++		host_present_area(area);
++		if (area[2] > 0.0f && area[3] > 0.0f && area[0] >= 0.0f && area[1] >= 0.0f &&
++			area[0] + area[2] <= 1.0f && area[1] + area[3] <= 1.0f)
++		{
++			*x = (int)(area[0] * drawable_width);
++			*y = (int)(area[1] * drawable_height);
++			*width = (int)(area[2] * drawable_width);
++			*height = (int)(area[3] * drawable_height);
++		}
++		if (*width <= 0 || *height <= 0)
++		{
++			*x = *y = 0;
++			*width = drawable_width;
++			*height = drawable_height;
++		}
++	}
++#endif
++}
++
+ unsigned int platform_window_framebuffer(void)
+ {
+ #ifdef HALO_IOS
+diff --git a/port/linux/src/sdl_platform.h b/port/linux/src/sdl_platform.h
+index 9f2463c..ad5cd0e 100644
+--- a/port/linux/src/sdl_platform.h
++++ b/port/linux/src/sdl_platform.h
+@@ -81,6 +81,10 @@ that fit the desktop, and display.window_size's; how many. None on
+ Android. */
+ int platform_window_sizes(long *widths, long *heights, int maximum);
+ void platform_video_drawable_size(int *width, int *height);
++/* the part of the drawable the picture is shown in, in pixels from its top
++left: all of it, but where a platform keeps part for itself (iPhone Duo
++held part open like a laptop, its touch controls below the fold) */
++void platform_video_present_area(int *x, int *y, int *width, int *height);
+ /* the window's mode and size and V-Sync, from config.toml as Settings has
+ just written it (the main thread's) */
+ void platform_display_apply(void);
+diff --git a/port/linux/src/ui_point.c b/port/linux/src/ui_point.c
+index 2861707..d918e56 100644
+--- a/port/linux/src/ui_point.c
++++ b/port/linux/src/ui_point.c
+@@ -9,23 +9,33 @@ The menus' points and the window's (ui_point.h).
+ #include <math.h>
+ 
+ /* where the picture is drawn in the window's pixels: letterboxed to the
+-back buffer's shape */
++back buffer's shape, in the area it is shown in (all of the window, unless
++the view says otherwise) */
+ static int picture_rectangle(struct ui_point_view const *view, int *left, int *top, int *width, int *height)
+ {
++	int area_left = 0, area_top = 0, area_width = view->pixel_width, area_height = view->pixel_height;
++
+ 	if (view->window_width <= 0 || view->window_height <= 0 || view->pixel_width <= 0 || view->pixel_height <= 0 ||
+ 		view->target_width <= 0 || view->target_height <= 0 || view->gl_width <= 0 || view->gl_height <= 0)
+ 	{
+ 		return 0;
+ 	}
+-	*width = view->pixel_width;
+-	*height = (int)((long)view->pixel_width * view->gl_height / view->gl_width);
+-	if (*height > view->pixel_height)
++	if (view->area_width > 0 && view->area_height > 0)
++	{
++		area_left = view->area_left;
++		area_top = view->area_top;
++		area_width = view->area_width;
++		area_height = view->area_height;
++	}
++	*width = area_width;
++	*height = (int)((long)area_width * view->gl_height / view->gl_width);
++	if (*height > area_height)
+ 	{
+-		*height = view->pixel_height;
+-		*width = (int)((long)view->pixel_height * view->gl_width / view->gl_height);
++		*height = area_height;
++		*width = (int)((long)area_height * view->gl_width / view->gl_height);
+ 	}
+-	*left = (view->pixel_width - *width) / 2;
+-	*top = (view->pixel_height - *height) / 2;
++	*left = area_left + (area_width - *width) / 2;
++	*top = area_top + (area_height - *height) / 2;
+ 	return 1;
+ }
+ 
+diff --git a/port/linux/src/ui_point.h b/port/linux/src/ui_point.h
+index 5ee05c9..96bb92a 100644
+--- a/port/linux/src/ui_point.h
++++ b/port/linux/src/ui_point.h
+@@ -27,6 +27,10 @@ struct ui_point_view
+ 	int gl_width, gl_height;
+ 	/* the game's screen width: 640, or more for a wide screen */
+ 	long screen_width;
++	/* the part of the window's pixels the picture is shown in, from the
++	top left (platform_video_present_area); a width or height of 0 is the
++	whole window */
++	int area_left, area_top, area_width, area_height;
+ };
+ 
+ /* a point of the window in the menus' coordinates; 0 and -1, -1 when the
+diff --git a/port/linux/tests/ui_point_test.c b/port/linux/tests/ui_point_test.c
+index b90adec..c2019da 100644
+--- a/port/linux/tests/ui_point_test.c
++++ b/port/linux/tests/ui_point_test.c
+@@ -108,6 +108,17 @@ int main(void)
+ 		CHECK(ui_point_from_window(&view, 540.0f, 1170.0f, &x, &y) && x == 320 && y == 240);
+ 		check_round_trip(&view);
+ 	}
++	/* iPhone Duo part open like a laptop: 1000x800 points at 2x, the picture
++	(1230x480, the shape of the half above the fold) in the top 780 pixels,
++	the touch controls below; a finger below the fold is no menu point */
++	{
++		struct ui_point_view view = { 1000, 800, 2000, 1600, 1230, 480, 1230, 480, 1230, 0, 0, 2000, 780 };
++
++		CHECK(ui_point_from_window(&view, 500.0f, 195.0f, &x, &y) && x == 320 && y == 240);
++		CHECK(ui_point_from_window(&view, 500.0f, 600.0f, &x, &y) && y >= 480);
++		CHECK(ui_point_to_window(&view, 320, 240, &window_x, &window_y) && window_y > 194.0f && window_y < 196.0f);
++		check_round_trip(&view);
++	}
+ 	/* no window yet */
+ 	{
+ 		struct ui_point_view view = { 0, 0, 0, 0, 640, 480, 640, 480, 640 };
