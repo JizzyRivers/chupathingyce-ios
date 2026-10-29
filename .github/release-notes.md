@@ -7,7 +7,9 @@ iphone, ipad, iphone duo, apple tv and vision pro. still a test build
 
 bring ur own disc image, the apps have no game files
 
-new in 0.4.0: iphone duo laptop mode, half open = game on top, controls on the bottom. book fold keeps buttons off the crease. full inner screen
+new in 0.4.1: iphone duo laptop mode actually kicks in. the game was stuck landscape so ios shrank it into the middle of the inner screen, now it turns w the phone on the big screen
+
+0.4.0: iphone duo laptop mode, half open = game on top, controls on the bottom. book fold keeps buttons off the crease. full inner screen
 
 0.3.1: touch controls redone. glass look, xbox colored abxy w labels, bigger fire, d-pad cross, icon pills for back/pause/light/swap
 
