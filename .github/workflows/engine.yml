@@ -1,7 +1,8 @@
-# Builds the game for iOS on its own (.github/actions/engine: SDL3 for iOS,
-# then ninja ios), for the port's changes: the game as a static library, and
-# a link of it with SDL3 and iOS's frameworks that fails on anything missing.
-# The app's workflow (ios.yml) runs the same build to link the game in.
+# Builds the game for iOS and the Apple TV on its own (.github/actions/engine:
+# SDL3 for each, then ninja ios or tvos), for the port's changes: the game as
+# a static library, and a link of it with SDL3 and the platform's frameworks
+# that fails on anything missing. The app's workflow (ios.yml) runs the same
+# build to link the game in.
 name: Engine
 
 on:
@@ -20,6 +21,10 @@ jobs:
   build:
     runs-on: macos-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ios, tvos]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,16 +36,19 @@ jobs:
           sudo xcode-select -s "$xcode"
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
+          xcrun --sdk appletvos --show-sdk-version
 
       - uses: ./.github/actions/engine
+        with:
+          platform: ${{ matrix.platform }}
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: engine-ios
+          name: engine-${{ matrix.platform }}
           path: |
             ninja.log
-            chupathingyce/build/ios/libhalo.a
-            chupathingyce/build/ios/libhalo_check.dylib
+            chupathingyce/build/${{ matrix.platform }}/libhalo.a
+            chupathingyce/build/${{ matrix.platform }}/libhalo_check.dylib
           if-no-files-found: ignore
           retention-days: 14

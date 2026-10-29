@@ -1,0 +1,47 @@
+diff --git a/port/linux/src/d3d8_gl.c b/port/linux/src/d3d8_gl.c
+index 8c8f661..461c651 100644
+--- a/port/linux/src/d3d8_gl.c
++++ b/port/linux/src/d3d8_gl.c
+@@ -185,6 +185,18 @@ static void screen_mode_choose(long *width, float scale[2])
+ 	const char *display = getenv("HALO_DISPLAY_WIDTH");
+ 
+ 	*width = config_integer("display.screen_width");
++#ifdef HALO_IOS
++	/* on iOS, the window's shape once it is open: it changes as iPhone Duo
++	folds and unfolds, and with an iPad's or a Vision Pro's window */
++	if (*width <= 0)
++	{
++		int window_width = 0, window_height = 0;
++
++		platform_video_drawable_size(&window_width, &window_height);
++		if (window_width > 0 && window_height > 0)
++			*width = (SCREEN_HEIGHT * window_width + window_height / 2) / window_height;
++	}
++#endif
+ 	if (*width <= 0)
+ 		*width = display ? atol(display) : 640;
+ 	if (*width < 640)
+@@ -1853,12 +1865,12 @@ HRESULT WINAPI Direct3D_CreateDevice(UINT adapter, D3DDEVTYPE device_type, void
+ 			device.presentation = *presentation_parameters;
+ 		width = device.presentation.BackBufferWidth ? device.presentation.BackBufferWidth : 640;
+ 		height = device.presentation.BackBufferHeight ? device.presentation.BackBufferHeight : 480;
+-#ifdef HALO_ANDROID
++#if defined(HALO_ANDROID) && !defined(HALO_IOS)
+ 		d3d8_surface_initialize(&device.back_buffer, D3DFMT_LIN_A8R8G8B8, width, height);
+ 		d3d8_surface_initialize(&device.depth_buffer, D3DFMT_LIN_D24S8, width, height);
+ #else
+ 		/* room for the widest screen, which F11 can switch to (the screen's
+-		width, above) */
++		width, above), or iOS's window can take */
+ 		d3d8_surface_initialize(&device.back_buffer, D3DFMT_LIN_A8R8G8B8, SCREEN_MAXIMUM_WIDTH, height);
+ 		d3d8_surface_initialize(&device.depth_buffer, D3DFMT_LIN_D24S8, SCREEN_MAXIMUM_WIDTH, height);
+ 		d3d8_surface_resize(&device.back_buffer, D3DFMT_LIN_A8R8G8B8, width, height);
+@@ -2016,7 +2028,7 @@ long halo_screen_commit(void)
+ 		screen_width = width;
+ 		screen_scale[0] = scale[0];
+ 		screen_scale[1] = scale[1];
+-#ifndef HALO_ANDROID
++#if !defined(HALO_ANDROID) || defined(HALO_IOS)
+ 		if (device.created)
+ 		{
+ 			device.presentation.BackBufferWidth = (UINT)width;
