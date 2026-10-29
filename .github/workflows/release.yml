@@ -3,12 +3,15 @@
 # .github/release-notes.md: one .ipa for iPhone, iPad and the Vision Pro,
 # one for the Apple TV. Its own workflow: ios.yml's paths filter keeps a
 # tag's push from running it. (A tagged commit whose message says [skip ci]
-# runs nothing, this included: tag one that does not.)
+# runs nothing, this included: tag one that does not.) A tag whose push ran
+# nothing (GitHub can miss a tag deleted and pushed again) is released by
+# hand: gh workflow run release.yml --ref v<version>.
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   apps:
@@ -16,6 +19,8 @@ jobs:
 
   publish:
     needs: apps
+    # (by hand, only from a tag)
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
