@@ -1,14 +1,13 @@
-# Builds the app for iPhone and iPad, unsigned, on a macOS runner: the .ipa
-# is the run's artifact, for SideStore or AltStore to sign with a free Apple
-# ID and install. No Mac or paid account needed.
+# Builds the apps, unsigned, on a macOS runner: ChupathingyCE for iPhone and
+# iPad (and the Vision Pro, which runs it as an iPad app), and for the Apple
+# TV. Each .ipa is the run's artifact, for SideStore, AltStore or Sideloadly
+# to sign with a free Apple ID and install. No Mac or paid account needed.
 #
-# The game is built first (.github/actions/engine) and linked into the
-# native app (app/project.yml, which XcodeGen makes the Xcode project of).
+# The game is built first for each (.github/actions/engine) and linked into
+# the native app (app/project.yml, which XcodeGen makes the Xcode project of).
 #
-# A pushed tag v<version> (v0.2.0) is a release (release.yml, which runs
-# this): the app takes its version, and the .ipa is published as a GitHub
-# pre-release with .github/release-notes.md, where anyone can download it
-# without signing in.
+# A pushed tag v<version> (v0.3.0) is a release (release.yml, which runs
+# this, then publishes both .ipa files): the apps take its version.
 name: iOS
 
 on:
@@ -28,16 +27,31 @@ jobs:
   build:
     runs-on: macos-latest
     timeout-minutes: 120
-    permissions:
-      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ios
+            scheme: ChupathingyCE
+            sdk: iphoneos
+            destination: generic/platform=iOS
+            lib: lib
+          - platform: tvos
+            scheme: ChupathingyCE-tvOS
+            sdk: appletvos
+            destination: generic/platform=tvOS
+            lib: lib-tvos
     env:
       CONFIGURATION: ${{ inputs.configuration || 'Release' }}
-      # a release's tag (v0.2.0), else empty
+      # a release's tag (v0.3.0), else empty
       VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
       # chupathingyce's pin (tools/android_build.py: SDL_TAG, SDL_COMMIT)
       SDL_TAG: release-3.4.16
       SDL_COMMIT: fa2c02bb6e21974a89ea9824bc53c9932abe5f9c
       IOS_MINIMUM: "16.4"
+      PLATFORM: ${{ matrix.platform }}
+      SCHEME: ${{ matrix.scheme }}
+      SDK: ${{ matrix.sdk }}
     defaults:
       run:
         working-directory: app
@@ -51,15 +65,18 @@ jobs:
           xcode=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
           sudo xcode-select -s "$xcode"
           xcodebuild -version
+          xcrun --sdk "$SDK" --show-sdk-version
 
       - name: The game
         uses: ./.github/actions/engine
+        with:
+          platform: ${{ matrix.platform }}
 
       - name: The game, into the app
         run: |
-          mkdir -p lib
-          cp ../chupathingyce/build/ios/libhalo.a ../build/sdl3-ios/lib/libSDL3.a lib/
-          ls -lh lib
+          mkdir -p ${{ matrix.lib }}
+          cp "../chupathingyce/build/$PLATFORM/libhalo.a" "../build/sdl3-$PLATFORM/lib/libSDL3.a" ${{ matrix.lib }}/
+          ls -lh ${{ matrix.lib }}
 
       # internet play's MQTT brokers, and the certificate authorities HTTPS
       # is checked against (curl's copy of Mozilla's, checked against the
@@ -75,16 +92,30 @@ jobs:
           brew install xcodegen
           xcodegen generate
 
+      # iPhone Duo's fold for the touch controls (app/Sources/iOS/Fold.swift)
+      # is iOS 27.1's: on with that SDK or newer, and left out before it
+      - name: What the SDK has
+        if: matrix.platform == 'ios'
+        run: |
+          version=$(xcrun --sdk iphoneos --show-sdk-version)
+          if [ "$(printf '%s\n27.1\n' "$version" | sort -V | head -1)" = "27.1" ]; then
+            echo "iOS $version SDK: iPhone Duo's fold on"
+            echo "SWIFT_CONDITIONS=IOS_27_1_SDK" >> "$GITHUB_ENV"
+          else
+            echo "iOS $version SDK: iPhone Duo's fold left out until 27.1"
+          fi
+
       - name: Build, unsigned
         run: |
           # (the whole log is the artifact below when this fails; here, its errors)
           set +e
           xcodebuild \
-            -project ChupathingyCE.xcodeproj -scheme ChupathingyCE \
+            -project ChupathingyCE.xcodeproj -scheme "$SCHEME" \
             -configuration "$CONFIGURATION" \
-            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -sdk "$SDK" -destination '${{ matrix.destination }}' \
             -derivedDataPath build \
             ${VERSION:+MARKETING_VERSION=${VERSION#v} CURRENT_PROJECT_VERSION=$GITHUB_RUN_NUMBER} \
+            ${SWIFT_CONDITIONS:+"SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) $SWIFT_CONDITIONS"} \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build > xcodebuild.log 2>&1
           status=$?
@@ -95,30 +126,20 @@ jobs:
       - name: Package the .ipa
         run: |
           mkdir -p Payload
-          cp -R "build/Build/Products/$CONFIGURATION-iphoneos/ChupathingyCE.app" Payload/
-          zip -qry "ChupathingyCE-$CONFIGURATION.ipa" Payload
-          ls -lh "ChupathingyCE-$CONFIGURATION.ipa"
-
-      - name: Publish the release
-        if: env.VERSION != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cp "ChupathingyCE-$CONFIGURATION.ipa" "ChupathingyCE-$VERSION.ipa"
-          gh release create "$VERSION" "ChupathingyCE-$VERSION.ipa" \
-            --title "$VERSION" \
-            --notes-file ../.github/release-notes.md --prerelease
+          cp -R "build/Build/Products/$CONFIGURATION-$SDK/ChupathingyCE.app" Payload/
+          zip -qry "ChupathingyCE-$PLATFORM-$CONFIGURATION.ipa" Payload
+          ls -lh "ChupathingyCE-$PLATFORM-$CONFIGURATION.ipa"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ChupathingyCE-${{ env.CONFIGURATION }}-ipa
-          path: app/ChupathingyCE-${{ env.CONFIGURATION }}.ipa
+          name: ChupathingyCE-${{ matrix.platform }}-${{ env.CONFIGURATION }}-ipa
+          path: app/ChupathingyCE-${{ matrix.platform }}-${{ env.CONFIGURATION }}.ipa
           retention-days: 14
 
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: build-logs
+          name: build-logs-${{ matrix.platform }}
           path: |
             app/xcodebuild.log
             ninja.log

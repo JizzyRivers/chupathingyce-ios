@@ -1,11 +1,13 @@
 __pycache__/
 *.pyc
 
-# the game and SDL3 for iOS, put there by .github/workflows/ios.yml
+# the game and SDL3 for iOS and tvOS, put there by .github/workflows/ios.yml
 app/lib/
+app/lib-tvos/
 # what XcodeGen makes of app/project.yml, and the build
 app/ChupathingyCE.xcodeproj/
 app/Info.plist
+app/Info-tvOS.plist
 app/build/
 app/Payload/
 app/*.ipa

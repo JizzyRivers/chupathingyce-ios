@@ -1,6 +1,8 @@
-# A pushed tag v<version> (v0.2.0) builds the app at that version and
-# publishes it as a GitHub pre-release (ios.yml's "Publish the release").
-# Its own workflow: ios.yml's paths filter keeps a tag's push from running it.
+# A pushed tag v<version> (v0.3.0) builds the apps at that version (ios.yml)
+# and publishes them as a GitHub pre-release, with
+# .github/release-notes.md: one .ipa for iPhone, iPad and the Vision Pro,
+# one for the Apple TV. Its own workflow: ios.yml's paths filter keeps a
+# tag's push from running it.
 name: Release
 
 on:
@@ -8,7 +10,30 @@ on:
     tags: ["v*"]
 
 jobs:
-  ios:
+  apps:
+    uses: ./.github/workflows/ios.yml
+
+  publish:
+    needs: apps
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    uses: ./.github/workflows/ios.yml
+    env:
+      VERSION: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ChupathingyCE-*-Release-ipa
+          merge-multiple: true
+
+      - name: Publish the release
+        run: |
+          mv ChupathingyCE-ios-Release.ipa "ChupathingyCE-$VERSION-iOS.ipa"
+          mv ChupathingyCE-tvos-Release.ipa "ChupathingyCE-$VERSION-tvOS.ipa"
+          sha256sum ChupathingyCE-*.ipa > SHA256SUMS.txt
+          gh release create "$VERSION" ChupathingyCE-*.ipa SHA256SUMS.txt \
+            --title "$VERSION" \
+            --notes-file .github/release-notes.md --prerelease
