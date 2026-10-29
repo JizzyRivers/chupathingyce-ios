@@ -2,7 +2,8 @@
 # and publishes them as a GitHub pre-release, with
 # .github/release-notes.md: one .ipa for iPhone, iPad and the Vision Pro,
 # one for the Apple TV. Its own workflow: ios.yml's paths filter keeps a
-# tag's push from running it.
+# tag's push from running it. (A tagged commit whose message says [skip ci]
+# runs nothing, this included: tag one that does not.)
 name: Release
 
 on:
