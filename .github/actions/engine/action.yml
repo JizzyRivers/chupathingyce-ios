@@ -22,6 +22,15 @@ outputs:
 runs:
   using: composite
   steps:
+    # what upstream's iOS port lacks: patches/chupathingyce (CI builds it for nobody else yet)
+    - name: Apply the changes to the game
+      shell: bash
+      run: |
+        for patch in patches/chupathingyce/*.patch; do
+          echo "applying $patch"
+          git -C chupathingyce apply --whitespace=nowarn "../$patch"
+        done
+
     - name: Tools
       shell: bash
       run: brew list ninja > /dev/null 2>&1 || brew install ninja

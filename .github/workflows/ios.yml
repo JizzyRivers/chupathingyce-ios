@@ -14,7 +14,7 @@ on:
   workflow_call:
   push:
     branches: [main]
-    paths: ["app/**", "chupathingyce", ".github/actions/engine/**", ".github/workflows/ios.yml"]
+    paths: ["app/**", "patches/**", "chupathingyce", ".github/actions/engine/**", ".github/workflows/ios.yml"]
   workflow_dispatch:
     inputs:
       configuration:

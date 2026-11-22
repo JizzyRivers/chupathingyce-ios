@@ -1,0 +1,13 @@
+diff --git a/port/ios/build.py b/port/ios/build.py
+index 8b002cf41..9b605edfe 100644
+--- a/port/ios/build.py
++++ b/port/ios/build.py
+@@ -96,6 +96,8 @@ IOS_FRAMEWORKS = [
+     "Foundation", "UIKit", "OpenGLES", "QuartzCore", "CoreGraphics", "CoreVideo", "Metal",
+     "CoreAudio", "AudioToolbox", "AVFoundation", "GameController", "CoreMotion", "CoreHaptics",
+     "CoreBluetooth", "UniformTypeIdentifiers",
++    # (FFmpeg's h264_videotoolbox encoder, which tools/ffmpeg_build.py enables for every Darwin target)
++    "CoreMedia", "VideoToolbox",
+ ]
+ IOS_LIBRARIES = ["iconv", "m"]
+ 
