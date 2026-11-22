@@ -66,8 +66,7 @@ how its built
 basically the android64 build (64 bit, sdl3 + gles3) w a few ios fixes on top. disc extraction is chupathingyces own xiso.c. touch controls are the android ones ported over. github actions builds everything on mac runners so u dont need a mac, push a v tag and it makes a release
 
 app/ is the swift app (xcodegen makes the project from app/project.yml). app/Sources/Shared is both apps, iOS is the iphone/ipad launcher, tvOS is the tv launcher + upload page
-port/ios is the game side, same code for ios and tvos (ninja ios / ninja tvos). the duo fold + hinge stuff is in there too (port/ios/src/ios_touch.m)
-patches/chupathingyce is the changes to the game
+the game side (port/ios, same code for ios and tvos, the duo fold + hinge stuff too) is upstream now, in the chupathingyce submodule
 chupathingyce is the game (submodule)
 
 gpl 3 like the game. disc reader based on milenkos theseus. the apple tv upload page + tv storage idea came from looking at steverice's visr https://github.com/steverice/visr, none of its code is in here. fan project, not microsoft / bungie / 343. nobody touches ui.map

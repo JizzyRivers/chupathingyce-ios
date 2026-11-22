@@ -268,15 +268,15 @@ final class UploadServer {
     <title>ChupathingyCE on the Apple TV</title>
     <style>
     :root { color-scheme: dark; }
-    body { margin: 0; padding: 24px 16px; background: #0d1114; color: #e8eef2;
+    body { margin: 0; padding: 24px 16px; background: #0c1014; color: #fff;
       font: 16px/1.5 -apple-system, system-ui, sans-serif; }
     main { max-width: 560px; margin: 0 auto; }
     h1 { font-size: 22px; margin: 0 0 8px; }
-    p { color: #8a9aa6; margin: 0 0 16px; }
-    label { display: block; background: #5fb35f; color: #0b0f0b; font-weight: 600; text-align: center;
+    p { color: #c8cdd2; margin: 0 0 16px; }
+    label { display: block; background: #a3201c; color: #fff; font-weight: 600; text-align: center;
       padding: 14px; border-radius: 10px; cursor: pointer; }
     input { display: none; }
-    progress { width: 100%; height: 10px; margin-top: 16px; accent-color: #5fb35f; }
+    progress { width: 100%; height: 10px; margin-top: 16px; accent-color: #a3201c; }
     #log div { margin-top: 8px; overflow-wrap: anywhere; }
     .error { color: #e06c5f; }
     </style></head>

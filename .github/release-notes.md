@@ -7,6 +7,8 @@ iphone, ipad, iphone duo, apple tv and vision pro. still a test build
 
 bring ur own disc image, the apps have no game files
 
+new: the game is upstream chupathingyce 0.9.2 now (everything new since the last build), and the launcher looks like the android one: dark, plain, the red helmet w tusks as the icon. the sopranos stuff is gone
+
 new in 0.4.1: iphone duo laptop mode actually kicks in. the game was stuck landscape so ios shrank it into the middle of the inner screen, now it turns w the phone on the big screen
 
 0.4.0: iphone duo laptop mode, half open = game on top, controls on the bottom. book fold keeps buttons off the crease. full inner screen

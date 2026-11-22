@@ -22,14 +22,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Apply the iOS port's changes to the game
-      shell: bash
-      run: |
-        for patch in patches/chupathingyce/*.patch; do
-          echo "applying $patch"
-          git -C chupathingyce apply --whitespace=nowarn "../$patch"
-        done
-
     - name: Tools
       shell: bash
       run: brew list ninja > /dev/null 2>&1 || brew install ninja
@@ -74,7 +66,7 @@ runs:
       # assertions are not checked)
       run: |
         env -u ANDROID_HOME -u ANDROID_SDK_ROOT -u ANDROID_NDK_HOME -u ANDROID_NDK_ROOT -u ANDROID_NDK_LATEST_HOME \
-          python3 configure.py --release --console-port ../port/ios "--$PLATFORM-sdl" "../build/sdl3-$PLATFORM"
+          python3 configure.py --release --console-port port/ios "--$PLATFORM-sdl" "../build/sdl3-$PLATFORM"
         grep -q "^build $PLATFORM:" build.ninja
 
     - name: Build

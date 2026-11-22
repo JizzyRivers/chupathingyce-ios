@@ -9,13 +9,14 @@ game itself is played with a controller: the remote has too few buttons.
 import UIKit
 
 private enum Colors {
-  static let background = UIColor(red: 0x0d / 255, green: 0x11 / 255, blue: 0x14 / 255, alpha: 1)
-  static let card = UIColor(red: 24 / 255, green: 32 / 255, blue: 38 / 255, alpha: 0.92)
-  static let text = UIColor(red: 0xe8 / 255, green: 0xee / 255, blue: 0xf2 / 255, alpha: 1)
-  static let muted = UIColor(red: 0x8a / 255, green: 0x9a / 255, blue: 0xa6 / 255, alpha: 1)
-  static let accent = UIColor(red: 0x5f / 255, green: 0xb3 / 255, blue: 0x5f / 255, alpha: 1)
-  /* the garage sign's pink (art/background.svg) */
-  static let neon = UIColor(red: 1, green: 0x8f / 255, blue: 0xb0 / 255, alpha: 1)
+  /* the Android launcher's: a near-black screen, white and grey text, the helmet icon's red */
+  static let background = UIColor(red: 12 / 255, green: 16 / 255, blue: 20 / 255, alpha: 1)
+  static let card = UIColor(red: 22 / 255, green: 28 / 255, blue: 34 / 255, alpha: 1)
+  static let text = UIColor.white
+  static let muted = UIColor(red: 200 / 255, green: 205 / 255, blue: 210 / 255, alpha: 1)
+  static let accent = UIColor(red: 0xa3 / 255, green: 0x20 / 255, blue: 0x1c / 255, alpha: 1)
+  /* the icon's tusk */
+  static let neon = UIColor(red: 0xf3 / 255, green: 0xe8 / 255, blue: 0xd0 / 255, alpha: 1)
   static let error = UIColor(red: 0xe0 / 255, green: 0x6c / 255, blue: 0x5f / 255, alpha: 1)
 }
 
@@ -42,24 +43,12 @@ final class TVLauncherViewController: UIViewController {
     super.viewDidLoad()
     view.backgroundColor = Colors.background
 
-    /* art/background.svg, rendered */
-    let background = UIImageView(image: UIImage(named: "background.png"))
-    background.contentMode = .scaleAspectFill
-    background.clipsToBounds = true
-    background.alpha = 0.6
-    background.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(background)
-
     stack.axis = .vertical
     stack.spacing = 24
     stack.translatesAutoresizingMaskIntoConstraints = false
     view.addSubview(stack)
 
     NSLayoutConstraint.activate([
-      background.topAnchor.constraint(equalTo: view.topAnchor),
-      background.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      background.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      background.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       stack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
       stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
       stack.widthAnchor.constraint(equalToConstant: 1100),
@@ -107,7 +96,7 @@ final class TVLauncherViewController: UIViewController {
     var configuration = primary ? UIButton.Configuration.filled() : UIButton.Configuration.bordered()
     configuration.title = title
     configuration.baseBackgroundColor = primary ? Colors.accent : Colors.background
-    configuration.baseForegroundColor = primary ? UIColor(red: 0x0b / 255, green: 0x0f / 255, blue: 0x0b / 255, alpha: 1) : Colors.text
+    configuration.baseForegroundColor = Colors.text
     configuration.cornerStyle = .medium
     return UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
   }
@@ -141,7 +130,7 @@ final class TVLauncherViewController: UIViewController {
       stack.removeArrangedSubview(view)
       view.removeFromSuperview()
     }
-    let title = label("ChupathingyCE", size: 48, color: Colors.neon, weight: .bold)
+    let title = label("ChupathingyCE", size: 48, color: Colors.text, weight: .bold)
     title.textAlignment = .center
     stack.addArrangedSubview(title)
 
@@ -157,7 +146,7 @@ final class TVLauncherViewController: UIViewController {
         views.append(label("\(gigabytes(done)) of \(gigabytes(total))", size: 29, color: Colors.muted))
       } else {
         let spinner = UIActivityIndicatorView(style: .large)
-        spinner.color = Colors.accent
+        spinner.color = Colors.neon
         spinner.startAnimating()
         views.append(spinner)
       }

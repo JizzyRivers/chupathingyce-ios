@@ -115,8 +115,7 @@ targets:
       - Sources/Shared
       - Sources/tvOS
       - ResourcesTV
-      # (the iPhone's art and internet play's files, the workflow's copies)
-      - path: Resources/background.png
+      # (internet play's files, the workflow's copies)
       - path: Resources/brokers.txt
         optional: true
       - path: Resources/cacert.pem

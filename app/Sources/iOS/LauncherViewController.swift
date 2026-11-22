@@ -8,28 +8,16 @@ import UIKit
 import UniformTypeIdentifiers
 
 private enum Colors {
-  static let background = UIColor(red: 0x0d / 255, green: 0x11 / 255, blue: 0x14 / 255, alpha: 1)
-  /* a card over the background picture: the surface, the night showing through */
-  static let card = UIColor(red: 24 / 255, green: 32 / 255, blue: 38 / 255, alpha: 0.9)
-  static let text = UIColor(red: 0xe8 / 255, green: 0xee / 255, blue: 0xf2 / 255, alpha: 1)
-  static let muted = UIColor(red: 0x8a / 255, green: 0x9a / 255, blue: 0xa6 / 255, alpha: 1)
-  static let accent = UIColor(red: 0x5f / 255, green: 0xb3 / 255, blue: 0x5f / 255, alpha: 1)
-  /* the garage sign's pink (art/background.svg) */
-  static let neon = UIColor(red: 1, green: 0x8f / 255, blue: 0xb0 / 255, alpha: 1)
+  /* the Android launcher's: a near-black screen, white and grey text, the helmet icon's red */
+  static let background = UIColor(red: 12 / 255, green: 16 / 255, blue: 20 / 255, alpha: 1)
+  static let card = UIColor(red: 22 / 255, green: 28 / 255, blue: 34 / 255, alpha: 1)
+  static let text = UIColor.white
+  static let muted = UIColor(red: 200 / 255, green: 205 / 255, blue: 210 / 255, alpha: 1)
+  static let accent = UIColor(red: 0xa3 / 255, green: 0x20 / 255, blue: 0x1c / 255, alpha: 1)
+  /* the icon's tusk */
+  static let neon = UIColor(red: 0xf3 / 255, green: 0xe8 / 255, blue: 0xd0 / 255, alpha: 1)
   static let error = UIColor(red: 0xe0 / 255, green: 0x6c / 255, blue: 0x5f / 255, alpha: 1)
 }
-
-/* a line at the top, a new one each time the app opens */
-private let quips = [
-  "Leave the plasma pistol. Take the gabagool.",
-  "Fuhgeddaboudit. The maps are in good hands.",
-  "Nobody touches ui.map. Capisce?",
-  "Respawn? In this family, we drive.",
-  "I got a buggy, a jacket and a bad feeling about this ring.",
-  "Back in the day, a man copied his own disc.",
-  "You come into my garage, on the day of the LAN party...",
-  "With all due respect, the Flood are not family.",
-]
 
 private func gigabytes(_ bytes: Int64) -> String {
   String(format: "%.2f GB", Double(bytes) / 1e9)
@@ -52,7 +40,6 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
   private var download: Download?
   private weak var downloadButton: UIButton?
   private var lastReport = Date.distantPast
-  private let quip = quips.randomElement()!
 
   private let scroll = UIScrollView()
   private let stack = UIStackView()
@@ -83,13 +70,6 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
     super.viewDidLoad()
     view.backgroundColor = Colors.background
 
-    /* art/background.svg, rendered */
-    let background = UIImageView(image: UIImage(named: "background.png"))
-    background.contentMode = .scaleAspectFill
-    background.clipsToBounds = true
-    background.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(background)
-
     scroll.translatesAutoresizingMaskIntoConstraints = false
     scroll.alwaysBounceVertical = true
     scroll.keyboardDismissMode = .interactive
@@ -103,10 +83,6 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
     let readable = stack.widthAnchor.constraint(equalTo: scroll.frameLayoutGuide.widthAnchor, constant: -32)
     readable.priority = .defaultHigh
     NSLayoutConstraint.activate([
-      background.topAnchor.constraint(equalTo: view.topAnchor),
-      background.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      background.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      background.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       scroll.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
       scroll.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
       scroll.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
@@ -137,7 +113,7 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
     var configuration = primary ? UIButton.Configuration.filled() : UIButton.Configuration.plain()
     configuration.title = title
     configuration.baseBackgroundColor = Colors.accent
-    configuration.baseForegroundColor = primary ? UIColor(red: 0x0b / 255, green: 0x0f / 255, blue: 0x0b / 255, alpha: 1) : Colors.accent
+    configuration.baseForegroundColor = primary ? Colors.text : Colors.neon
     configuration.cornerStyle = .medium
     configuration.contentInsets = NSDirectionalEdgeInsets(top: primary ? 14 : 10, leading: 12, bottom: primary ? 14 : 10, trailing: 12)
     configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
@@ -172,10 +148,15 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
       stack.removeArrangedSubview(view)
       view.removeFromSuperview()
     }
-    let quipLabel = label(quip, size: 17, color: Colors.neon)
-    quipLabel.font = .italicSystemFont(ofSize: 17)
-    quipLabel.textAlignment = .center
-    stack.addArrangedSubview(quipLabel)
+    let icon = UIImageView(image: UIImage(named: "helmet.png"))
+    icon.contentMode = .scaleAspectFit
+    icon.layer.cornerRadius = 16
+    icon.clipsToBounds = true
+    icon.heightAnchor.constraint(equalToConstant: 96).isActive = true
+    stack.addArrangedSubview(icon)
+    let heading = label("ChupathingyCE", size: 24, color: Colors.text, weight: .semibold)
+    heading.textAlignment = .center
+    stack.addArrangedSubview(heading)
 
     switch state {
     case let .importing(title, status, done, total, cancel):
@@ -190,7 +171,7 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
         views.append(label("\(gigabytes(done)) of \(gigabytes(total))", size: 15, color: Colors.muted))
       } else {
         let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.color = Colors.accent
+        spinner.color = Colors.neon
         spinner.startAnimating()
         views.append(spinner)
       }

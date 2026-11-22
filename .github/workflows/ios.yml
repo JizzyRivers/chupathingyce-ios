@@ -14,7 +14,7 @@ on:
   workflow_call:
   push:
     branches: [main]
-    paths: ["app/**", "port/**", "patches/**", "chupathingyce", ".github/actions/engine/**", ".github/workflows/ios.yml"]
+    paths: ["app/**", "chupathingyce", ".github/actions/engine/**", ".github/workflows/ios.yml"]
   workflow_dispatch:
     inputs:
       configuration:
@@ -80,7 +80,7 @@ jobs:
 
       # internet play's MQTT brokers, and the certificate authorities HTTPS
       # is checked against (curl's copy of Mozilla's, checked against the
-      # digest curl publishes beside it): port/ios/src/ios_main.c
+      # digest curl publishes beside it): chupathingyce/port/ios/src/ios_main.c
       - name: Internet play's files, into the bundle
         run: |
           cp ../chupathingyce/port/assets/network/brokers.txt Resources/
@@ -117,7 +117,7 @@ jobs:
           ls -lh "ChupathingyCE-$PLATFORM-$CONFIGURATION.ipa"
 
       # iPhone Duo's inner display, edge to edge, and its fold and hinge
-      # (port/ios/src/ios_touch.m) are for apps built with the iOS 27.1 SDK
+      # (chupathingyce/port/ios/src/ios_touch.m) are for apps built with the iOS 27.1 SDK
       # or newer: iOS reads the SDK from the binary, and letterboxes an
       # older one. Until the runner's Xcode has 27.1, a second .ipa is the
       # same app with its binary marked as built with it (vtool), for iPhone
