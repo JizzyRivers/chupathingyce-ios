@@ -1,0 +1,13 @@
+diff --git a/port/linux/src/posix_steam_bridge.c b/port/linux/src/posix_steam_bridge.c
+index 7675f08b0..8af5a6a68 100644
+--- a/port/linux/src/posix_steam_bridge.c
++++ b/port/linux/src/posix_steam_bridge.c
+@@ -14,7 +14,7 @@ SPDX-License-Identifier: MIT
+ #include "../include/halo_port_features.h" /* HALO_MCC: on a console it is 0 before the test below */
+ #if !defined(HALO_MCC) || HALO_MCC /* Halo MCC maps (halo_port_features.h): a console builds this to nothing */
+ 
+-#if !defined(_WIN32) && !defined(__ANDROID__)
++#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(HALO_ANDROID) /* (HALO_ANDROID: iOS and tvOS too, whose stand-ins are steam_client_bridge.c's) */
+ 
+ #include "steam_client_bridge.h"
+ 
