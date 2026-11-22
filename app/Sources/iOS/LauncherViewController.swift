@@ -93,6 +93,12 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
       stack.widthAnchor.constraint(lessThanOrEqualToConstant: 640),
       readable,
     ])
+    /* back from the Files app: a disc image put in the folder shows up */
+    NotificationCenter.default.addObserver(
+      forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+    ) { [weak self] _ in
+      if let self, case .idle = self.state { self.render() }
+    }
     render()
   }
 
@@ -191,7 +197,17 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
               + "comes with none of the game's files.", size: 15, color: Colors.muted),
         ]
         if let error { views.append(label(error, size: 15, color: Colors.error)) }
-        views.append(button("Pick the disc image", primary: true) { [weak self] in self?.pick(.disc) })
+        for disc in discsInFolder() {
+          views.append(button("Import \(disc.lastPathComponent) from the app's folder", primary: true) { [weak self] in
+            self?.importDisc(disc)
+          })
+        }
+        views.append(button("Pick the disc image", primary: discsInFolder().isEmpty) { [weak self] in self?.pick(.disc) })
+        views.append(
+          label(
+            "The picker won't open your image (some sideloading tools sign the app so it can't)? Copy the .iso or "
+              + ".xiso into the ChupathingyCE folder in the Files app, under On My iPhone, and a button for it shows "
+              + "up here.", size: 13, color: Colors.muted))
         views.append(button("Pick a zip of the maps folder", primary: false) { [weak self] in self?.pick(.maps) })
       } else {
         views = [
@@ -294,23 +310,35 @@ final class LauncherViewController: UIViewController, UIDocumentPickerDelegate, 
     present(picker, animated: true)
   }
 
+  /* disc images put straight into the app's folder with the Files app: no picker, no security scope */
+  private func discsInFolder() -> [URL] {
+    let files = (try? FileManager.default.contentsOfDirectory(at: GameData.root, includingPropertiesForKeys: nil)) ?? []
+    return files.filter { ["iso", "xiso"].contains($0.pathExtension.lowercased()) }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+  }
+
+  private func importDisc(_ disc: URL, release: @escaping () -> Void = {}) {
+    run("Copying the game's data", work: { progress in try MapImport.importDisc(disc, progress: progress) }) {
+      [weak self] error in
+      release()
+      guard let self else { return }
+      if let error {
+        self.state = .idle(error: String(describing: error))
+      } else {
+        self.state = .idle(error: nil)
+        self.alert(
+          "The game's data is in place",
+          "The disc's maps and movies are copied. Play when ready. The image itself is still in the app's folder: delete it in the Files app to get its space back.")
+      }
+    }
+  }
+
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
     guard !urls.isEmpty else { return }
     let accessed = urls.filter { $0.startAccessingSecurityScopedResource() }
     let release = { for url in accessed { url.stopAccessingSecurityScopedResource() } }
     switch picking {
     case .disc:
-      run("Copying the game's data", work: { progress in try MapImport.importDisc(urls[0], progress: progress) }) {
-        [weak self] error in
-        release()
-        guard let self else { return }
-        if let error {
-          self.state = .idle(error: String(describing: error))
-        } else {
-          self.state = .idle(error: nil)
-          self.alert("The game's data is in place", "The disc's maps and movies are copied. Play when ready.")
-        }
-      }
+      importDisc(urls[0], release: release)
     case .maps:
       importMaps(urls, then: release)
     }
